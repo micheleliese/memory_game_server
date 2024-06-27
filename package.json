@@ -1,0 +1,18 @@
+{
+  "name": "memory_game_node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "rm:all": "rm -rf node_modules .next out dist build yarn.lock package-lock.json"
+
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
