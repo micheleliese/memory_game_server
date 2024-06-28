@@ -4,25 +4,29 @@ const socketIo = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, { cors: { origin: "*" } });
 
-const port = process.env.PORT || 3000;
+const port = 3000;
 
-// Estado do jogo
 let players = [];
 let gameBoard = [];
 let gameStarted = false;
 
-// Função para inicializar o tabuleiro do jogo
 const initializeGameBoard = () => {
-  const cards = ["A", "A", "B", "B", "C", "C", "D", "D"]; // Exemplo simples com 4 pares
+  const cards = [...Array(18)].map((_, index) => ({
+    id: index,
+    image: index,
+    isFlipped: false,
+    isMatched: false
+  }));
   gameBoard = cards.sort(() => Math.random() - 0.5);
 };
 
 io.on("connection", (socket) => {
-  console.log("Novo jogador conectado:", socket.id);
+  console.log("New player connected:", socket.id);
 
   socket.on("joinGame", (playerName) => {
+    console.log("Player", playerName, "trying to join the game");
     if (players.length < 2 && !gameStarted) {
       players.push({ id: socket.id, name: playerName, score: 0 });
       socket.emit("gameJoined", { success: true, gameBoard, players });
@@ -35,29 +39,30 @@ io.on("connection", (socket) => {
     } else {
       socket.emit("gameJoined", {
         success: false,
-        message: "Jogo já está cheio ou em andamento",
+        message: "Game is already full or in progress",
       });
     }
   });
 
   socket.on("flipCard", (cardIndex) => {
+    console.log("Flipped card:", cardIndex);
     io.emit("cardFlipped", { cardIndex, card: gameBoard[cardIndex] });
     /**
-     * Implementar um algoritmo de lista circular para controlar a vez dos jogadores
-     * Lógica para verificar se as cartas viradas são iguais
-     * Lógica para verificar se as cartas viradas são diferentes
-     * Lógica para virar as cartas de volta
-     * Lógica para passar a vez para o outro jogador
-     * Atualizar o placar dos jogadores
-     * Verificar se o jogo acabou
-     * Enviar mensagem de fim de jogo
-     * Reiniciar o jogo
+     * Implement a circular list algorithm to control players' turns
+     * Logic to check if flipped cards are a match
+     * Logic to check if flipped cards are different
+     * Logic to flip the cards back
+     * Logic to pass the turn to the other player
+     * Update players' scores
+     * Check if the game is over
+     * Send game over message
+     * Restart the game
      * 
      */
   });
 
   socket.on("disconnect", () => {
-    console.log("Jogador desconectado:", socket.id);
+    console.log("Player disconnected:", socket.id);
     players = players.filter((player) => player.id !== socket.id);
     io.emit("playerLeft", players);
     if (players.length < 2) {
@@ -67,4 +72,4 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(port, () => console.log(`Servidor rodando na porta ${port}`));
+server.listen(port, () => console.log(`Server running on port ${port}`));
