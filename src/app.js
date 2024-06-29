@@ -17,7 +17,7 @@ const initializeGameBoard = () => {
     id: index,
     image: index,
     isFlipped: false,
-    isMatched: false
+    isMatched: false,
   }));
   gameBoard = cards.sort(() => Math.random() - 0.5);
 };
@@ -27,21 +27,29 @@ io.on("connection", (socket) => {
 
   socket.on("joinGame", (playerName) => {
     console.log("Player", playerName, "trying to join the game");
-    if (players.length < 2 && !gameStarted) {
-      players.push({ id: socket.id, name: playerName, score: 0 });
-      socket.emit("gameJoined", { success: true, gameBoard, players });
-      io.emit("playerJoined", players);
-      if (players.length === 2) {
-        gameStarted = true;
-        initializeGameBoard();
-        io.emit("startGame", gameBoard);
-      }
-    } else {
+    if (gameStarted) {
       socket.emit("gameJoined", {
         success: false,
         message: "Game is already full or in progress",
       });
+    } else {
+      players.push({ id: socket.id, name: playerName, score: 0 });
+      if (players.length === 1) {
+        console.log("Player", socket.id, "is the host");
+        socket.emit("host", socket.id);
+      }
+      io.emit("playerJoined", players);
+      socket.emit("gameJoined", {
+        success: true,
+        message: "You have successfully joined the game",
+      });
     }
+  });
+
+  socket.on("startGame", () => {
+    gameStarted = true;
+    initializeGameBoard();
+    io.emit("startedGame", gameBoard);
   });
 
   socket.on("flipCard", (cardIndex) => {
@@ -57,7 +65,7 @@ io.on("connection", (socket) => {
      * Check if the game is over
      * Send game over message
      * Restart the game
-     * 
+     *
      */
   });
 
