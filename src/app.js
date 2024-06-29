@@ -33,7 +33,7 @@ io.on("connection", (socket) => {
         message: "Game is already full or in progress",
       });
     } else {
-      players.push({ id: socket.id, name: playerName, score: 0 });
+      players.push({ id: socket.id, name: playerName, score: 0, turn: false });
       if (players.length === 1) {
         console.log("Player", socket.id, "is the host");
         socket.emit("host", socket.id);
