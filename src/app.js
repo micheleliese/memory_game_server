@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
+const getIp = require("./get_ip");
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,13 @@ io.on("connection", (socket) => {
 
   socket.on("startGame", () => {
     gameStarted = true;
+    const randonIndex = Math.floor(Math.random() * players.length);
+    players = players.map((player, index) => ({
+      ...player,
+      turn: index === randonIndex,
+    }));
+    console.log("Game started with players:", players, "and random index:", randonIndex);
+    socket.emit("playerJoined", players);
     initializeGameBoard();
     io.emit("startedGame", gameBoard);
   });
@@ -80,4 +88,4 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(port, () => console.log(`Server running on port ${port}`));
+server.listen(port, () => console.log(`Server running on http://${getIp().split(': ')[1]}:${port}`));
