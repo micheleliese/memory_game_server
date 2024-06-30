@@ -23,7 +23,7 @@ const initializeGameBoard = () => {
   const duplicatedImageIds = [...selectedImageIds, ...selectedImageIds];
   gameBoard = duplicatedImageIds.map((imageId, index) => ({
     id: index,
-    imageId: imageId,
+    imageId: `F${imageId}`,
     isFlipped: false,
     isMatched: false,
   }));
