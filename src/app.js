@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
         turn: index === randonIndex,
       }));
       console.log(`Game started with players: ${players} and random index: ${randonIndex}`);
-      socket.emit("players", players);
+      io.emit("players", players);
       initializeGameBoard();
       io.emit("startedGame", gameBoard);
     }
@@ -79,7 +79,6 @@ io.on("connection", (socket) => {
 
   socket.on("flipCard", (cardIndex) => {
     console.log(`Flipped card: ${cardIndex}`);
-    io.emit("cardFlipped", { cardIndex, card: gameBoard[cardIndex] });
     if (gameBoard.filter((card) => !card.isMatched).length === 2) {
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].image === flippedCards[1].image) {
@@ -94,7 +93,10 @@ io.on("connection", (socket) => {
             ? { ...player, score: player.score + 1 }
             : { ...player, turn: !player.turn }
         );
-        io.emit("matchedCards", gameBoard);
+        io.emit("cardFlipped", {
+          gameBoard: gameBoard,
+          matched: true,
+        });
         io.emit("players", players);
       } else {
         console.log(`Flipped cards are different: ${flippedCards}`);
@@ -108,7 +110,10 @@ io.on("connection", (socket) => {
             ? { ...player, turn: !player.turn }
             : { ...player, turn: !player.turn }
         );
-        io.emit("differentCards", gameBoard);
+        io.emit("cardFlipped", {
+          gameBoard: gameBoard,
+          matched: false,
+        });
         io.emit("players", players);
       }
     }
