@@ -36,13 +36,14 @@ const initializeGameBoard = () => {
 io.on("connection", (socket) => {
   console.log(`New player connected: ${socket.id}`);
   socket.on("joinGame", (playerName) => {
-    console.log(`Player ${socket.id} joined the game with name: ${playerName}`);
     if (gameStarted) {
+      console.log(`Player ${socket.id} cannot join the game because it has already started`);
       socket.emit("gameJoined", {
         success: false,
         message: "Game is already full or in progress",
       });
     } else {
+      console.log(`Player ${socket.id} joined the game with name: ${playerName}`);
       players.push({ id: socket.id, name: playerName, score: 0, turn: false });
       if (players.length === 1) {
         console.log(`Player ${socket.id} is the host`);
@@ -81,7 +82,7 @@ io.on("connection", (socket) => {
     console.log(`Flipped card: ${cardIndex}`);
     if (gameBoard.filter((card) => !card.isMatched).length === 2) {
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
-      if (flippedCards[0].image === flippedCards[1].image) {
+      if (flippedCards[0].imageId === flippedCards[1].imageId) {
         console.log(`Matched cards: ${flippedCards}`);
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id)
@@ -116,6 +117,16 @@ io.on("connection", (socket) => {
         });
         io.emit("players", players);
       }
+    } else {
+      gameBoard = gameBoard.map((card) =>
+        card.id === cardIndex
+          ? { ...card, isFlipped: true }
+          : card
+      );
+      io.emit("cardFlipped", {
+        gameBoard: gameBoard,
+        matched: false,
+      });
     }
   });
 
