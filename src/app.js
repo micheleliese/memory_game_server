@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
         ...player,
         turn: index === randonIndex,
       }));
-      console.log(`Game started with players: ${players} and random index: ${randonIndex}`);
+      console.log(`Game started with players: ${players.map((player) => JSON.stringify(player))} and random index: ${randonIndex}`);
       io.emit("players", players);
       initializeGameBoard();
       io.emit("startedGame", gameBoard);
@@ -81,47 +81,63 @@ io.on("connection", (socket) => {
   socket.on("flipCard", (cardIndex) => {
     console.log(`Flipped card: ${cardIndex}`);
     gameBoard = gameBoard.map((card) => (card.id === cardIndex ? { ...card, isFlipped: true } : card));
-    if (gameBoard.filter((card) => card.isFlipped).length === 2) {
+    if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) {
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].imageId === flippedCards[1].imageId) {
-        console.log(`Matched cards: ${flippedCards}`);
+        console.log(`Matched cards: ${flippedCards.map((card) => JSON.stringify(card))}`);
         gameBoard = gameBoard.map((card) =>
-          flippedCards.some((flippedCard) => flippedCard.id === card.id)
-            ? { ...card, isMatched: true }
-            : card
+          flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isMatched: true } : card
         );
-        players = players.map((player) =>
-          player.id === socket.id
-            ? { ...player, score: player.score + 1 }
-            : { ...player, turn: !player.turn }
-        );
+        // incrementar score com map
+        players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
+        
+        console.log(`Players: ${players.map((player) => JSON.stringify(player))}`);
+
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
-          matched: true,
+          message: `Player ${socket.id} has matched cards`,
         });
         io.emit("players", players);
       } else {
-        console.log(`Flipped cards are different: ${flippedCards}`);
-        gameBoard = gameBoard.map((card) =>
-          flippedCards.some((flippedCard) => flippedCard.id === card.id)
-            ? { ...card, isFlipped: false }
-            : card
-        );
-        players = players.map((player) =>
-          player.id === socket.id
-            ? { ...player, turn: !player.turn }
-            : { ...player, turn: !player.turn }
-        );
+        console.log(`Flipped cards are different: ${flippedCards.map((card) => JSON.stringify(card))}`);
+        // enviar mensagem de cartas diferentes
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
-          matched: false,
+          message: `Player ${socket.id} has flipped cards`,
         });
-        io.emit("players", players);
+        // resetar cartas viradas
+        gameBoard = gameBoard.map((card) =>
+          flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isFlipped: false } : card
+        );
+
+        // passar a vez
+        for (let i = 0; i < players.length; i++) {
+          if (players[i].id === socket.id) {
+            players[i].turn = false;
+            if (i === players.length - 1) {
+              players[0].turn = true;
+            } else {
+              players[i + 1].turn = true;
+            }
+            break;
+          }
+        } 
+
+        console.log(`Players: ${players.map((player) => JSON.stringify(player))}`);
+
+        setTimeout(() => {
+          io.emit("cardFlipped", {
+            gameBoard: gameBoard,
+            message: `reset cards flipped by player ${socket.id}`,
+          });
+          io.emit("players", players);
+        }, 2000);
       }
     } else {
+      console.log(`Player ${socket.id} has flipped a card and is waiting for the turn`);
       io.emit("cardFlipped", {
         gameBoard: gameBoard,
-        matched: false,
+        message: `Player ${socket.id} has flipped a card`,
       });
     }
   });
