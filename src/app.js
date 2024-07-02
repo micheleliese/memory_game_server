@@ -80,7 +80,8 @@ io.on("connection", (socket) => {
 
   socket.on("flipCard", (cardIndex) => {
     console.log(`Flipped card: ${cardIndex}`);
-    if (gameBoard.filter((card) => !card.isMatched).length === 2) {
+    gameBoard = gameBoard.map((card) => (card.id === cardIndex ? { ...card, isFlipped: true } : card));
+    if (gameBoard.filter((card) => card.isFlipped).length === 2) {
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].imageId === flippedCards[1].imageId) {
         console.log(`Matched cards: ${flippedCards}`);
@@ -118,11 +119,6 @@ io.on("connection", (socket) => {
         io.emit("players", players);
       }
     } else {
-      gameBoard = gameBoard.map((card) =>
-        card.id === cardIndex
-          ? { ...card, isFlipped: true }
-          : card
-      );
       io.emit("cardFlipped", {
         gameBoard: gameBoard,
         matched: false,
