@@ -118,9 +118,17 @@ io.on("connection", (socket) => {
           const playerWithMaxScore = players.reduce((prev, current) => (prev.score > current.score ? prev : current));
           if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
             console.log("There is a tie");
+            initializeGameBoard();
+            players = players.map((player) => ({ ...player, score: 0 }));
+            io.emit("startedGame", gameBoard);
+            io.emit("players", players);
             io.emit("gameTied", duplicates);
           } else {
             console.log("There is a winner");
+            initializeGameBoard();
+            players = players.map((player) => ({ ...player, score: 0 }));
+            io.emit("startedGame", gameBoard);
+            io.emit("players", players);
             io.emit("gameWon", playerWithMaxScore);
           }
         }
