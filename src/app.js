@@ -19,7 +19,7 @@ const initializeGameBoard = () => {
     const j = Math.floor(Math.random() * (i + 1));
     [imageIds[i], imageIds[j]] = [imageIds[j], imageIds[i]];
   }
-  const selectedImageIds = imageIds.slice(0, 9);
+  const selectedImageIds = imageIds.slice(0, 5);
   let duplicatedImageIds = [...selectedImageIds, ...selectedImageIds];
   for (let i = duplicatedImageIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -32,6 +32,17 @@ const initializeGameBoard = () => {
     isMatched: false,
   }));
 };
+
+const findDuplicates = (lista) => {
+  for (let i = 0; i < lista.length; i++) {
+    for (let j = i + 1; j < lista.length; j++) {
+      if (lista[i].score === lista[j].score) {
+        return [lista[i], lista[j]];
+      }
+    }
+  }
+  return null;
+}
 
 io.on("connection", (socket) => {
   console.log(`New player connected: ${socket.id}`);
@@ -98,6 +109,21 @@ io.on("connection", (socket) => {
           message: `Player ${socket.id} has matched cards`,
         });
         io.emit("players", players);
+
+        // verificar se todas as cartas já foram viradas
+        if (gameBoard.filter((card) => !card.isMatched).length === 0) {
+          console.log("All cards have been matched");
+          // verificar se existe players com o mesmo score
+          const duplicates = findDuplicates(players);
+          const playerWithMaxScore = players.reduce((prev, current) => (prev.score > current.score ? prev : current));
+          if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
+            console.log("There is a tie");
+            io.emit("gameTied", duplicates);
+          } else {
+            console.log("There is a winner");
+            io.emit("gameWon", playerWithMaxScore);
+          }
+        }
       } else {
         console.log(`Flipped cards are different: ${flippedCards.map((card) => JSON.stringify(card))}`);
         // enviar mensagem de cartas diferentes
