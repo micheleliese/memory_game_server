@@ -19,7 +19,7 @@ const initializeGameBoard = () => {
     const j = Math.floor(Math.random() * (i + 1));
     [imageIds[i], imageIds[j]] = [imageIds[j], imageIds[i]];
   }
-  const selectedImageIds = imageIds.slice(0, 5);
+  const selectedImageIds = imageIds.slice(0, 8);
   let duplicatedImageIds = [...selectedImageIds, ...selectedImageIds];
   for (let i = duplicatedImageIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -47,35 +47,35 @@ const findDuplicates = (lista) => {
 const getPlayerName = (socketId) => players.find((player) => player.id === socketId).name;
 
 io.on("connection", (socket) => {
-  console.log(`New player connected: ${socket.id}`);
+  console.log(`Novo jogador conectado: ${socket.id}`);
   socket.on("joinGame", (playerName) => {
     if (gameStarted) {
-      console.log(`Player ${socket.id} cannot join the game because it has already started`);
+      console.log(`O jogador ${socket.id} não pode entrar no jogo porque já começou`);
       socket.emit("gameJoined", {
         success: false,
-        message: "Game is already full or in progress",
+        message: "O jogo já está cheio ou em andamento",
       });
     } else {
-      console.log(`Player ${socket.id} joined the game with name: ${playerName}`);
+      console.log(`O jogador ${socket.id} entrou no jogo com o nome: ${playerName}`);
       players.push({ id: socket.id, name: playerName, score: 0, turn: false });
       if (players.length === 1) {
-        console.log(`Player ${socket.id} is the host`);
+        console.log(`O jogador ${socket.id} é o anfitrião`);
         socket.emit("host", socket.id);
       }
       io.emit("players", players);
       socket.emit("gameJoined", {
         success: true,
-        message: "You have successfully joined the game",
+        message: "Você entrou no jogo com sucesso",
       });
     }
   });
 
   socket.on("startGame", () => {
     if (players.length < 2) {
-      console.log("Game cannot be started with less than 2 players");
+      console.log("O jogo não pode ser iniciado com menos de 2 jogadores");
       socket.emit("gameStarted", {
         success: false,
-        message: "Game cannot be started with less than 2 players",
+        message: "O jogo não pode ser iniciado com menos de 2 jogadores",
       });
     } else {
       gameStarted = true;
@@ -84,7 +84,7 @@ io.on("connection", (socket) => {
         ...player,
         turn: index === randonIndex,
       }));
-      console.log(`Game started with players: ${players.map((player) => JSON.stringify(player))} and random index: ${randonIndex}`);
+      console.log(`Jogo iniciado com jogadores: ${players.map((player) => JSON.stringify(player))} e índice aleatório: ${randonIndex}`);
       io.emit("players", players);
       initializeGameBoard();
       io.emit("startedGame", gameBoard);
@@ -92,42 +92,42 @@ io.on("connection", (socket) => {
   });
 
   socket.on("flipCard", (cardIndex) => {
-    console.log(`Flipped card: ${cardIndex}`);
+    console.log(`Carta virada: ${cardIndex}`);
     gameBoard = gameBoard.map((card) => (card.id === cardIndex ? { ...card, isFlipped: true } : card));
-    if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) { // se achou dois cards virados e que nao deram match
+    if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) { // se encontrou duas cartas viradas e não combinadas
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].imageId === flippedCards[1].imageId) {
-        console.log(`Matched cards: ${flippedCards.map((card) => JSON.stringify(card))}`);
+        console.log(`Cartas combinadas: ${flippedCards.map((card) => JSON.stringify(card))}`);
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isMatched: true } : card
         );
 
         players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
         
-        console.log(`Players: ${players.map((player) => JSON.stringify(player))}`);
+        console.log(`Jogadores: ${players.map((player) => JSON.stringify(player))}`);
 
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
-          message: `${getPlayerName(socket.id)} has matched cards`,
+          message: `${getPlayerName(socket.id)} combinou as cartas`,
           variant: 'success'
         });
         io.emit("players", players);
 
         // verificar se todas as cartas já foram viradas
         if (gameBoard.filter((card) => !card.isMatched).length === 0) {
-          console.log("All cards have been matched");
-          // verificar se existe players com o mesmo score
+          console.log("Todas as cartas foram combinadas");
+          // verificar se existem jogadores com a mesma pontuação
           const duplicates = findDuplicates(players);
           const playerWithMaxScore = players.reduce((prev, current) => (prev.score > current.score ? prev : current));
           if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
-            console.log("There is a tie");
+            console.log("Há um empate");
             initializeGameBoard();
             players = players.map((player) => ({ ...player, score: 0 }));
             io.emit("startedGame", gameBoard);
             io.emit("players", players);
             io.emit("gameTied", duplicates);
           } else {
-            console.log("There is a winner");
+            console.log("Há um vencedor");
             initializeGameBoard();
             players = players.map((player) => ({ ...player, score: 0 }));
             io.emit("startedGame", gameBoard);
@@ -136,7 +136,7 @@ io.on("connection", (socket) => {
           }
         }
       } else {
-        console.log(`Flipped cards are different: ${flippedCards.map((card) => JSON.stringify(card))}`);
+        console.log(`As cartas viradas são diferentes: ${flippedCards.map((card) => JSON.stringify(card))}`);
         // enviar mensagem de cartas diferentes
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
@@ -161,7 +161,7 @@ io.on("connection", (socket) => {
           }
         } 
 
-        console.log(`Players: ${players.map((player) => JSON.stringify(player))}`);
+        console.log(`Jogadores: ${players.map((player) => JSON.stringify(player))}`);
 
         setTimeout(() => {
           io.emit("cardFlipped", {
@@ -173,17 +173,17 @@ io.on("connection", (socket) => {
         }, 2000);
       }
     } else {
-      console.log(`Player ${getPlayerName(socket.id)} has flipped a card and is waiting for the turn`);
+      console.log(`O jogador ${getPlayerName(socket.id)} virou uma carta e está esperando a vez`);
       io.emit("cardFlipped", {
         gameBoard: gameBoard,
-        message: `${getPlayerName(socket.id)} has flipped a card`,
+        message: `${getPlayerName(socket.id)} virou uma carta`,
         variant: 'info'
       });
     }
   });
 
   socket.on("disconnect", () => {
-    console.log(`Player disconnected: ${socket.id}`);
+    console.log(`Jogador desconectado: ${socket.id}`);
     players = players.filter((player) => player.id !== socket.id);
     io.emit("playerLeft", players);
     if (players.length < 2) {
@@ -194,5 +194,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(port, () =>
-  console.log(`Server running on http://${getIp().split(": ")[1]}:${port}`)
+  console.log(`Servidor rodando em http://${getIp().split(": ")[1]}:${port}`)
 );
