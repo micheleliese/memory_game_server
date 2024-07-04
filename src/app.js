@@ -57,10 +57,18 @@ io.on("connection", (socket) => {
       });
     } else {
       console.log(`O jogador ${socket.id} entrou no jogo com o nome: ${playerName}`);
-      players.push({ id: socket.id, name: playerName, score: 0, turn: false });
+
+      const newPlayer = { 
+        id: socket.id, 
+        name: playerName,
+        score: 0, 
+        turn: false,
+        isHost: players.length === 0
+      };
+      players.push(newPlayer);
+
       if (players.length === 1) {
         console.log(`O jogador ${socket.id} é o anfitrião`);
-        socket.emit("host", socket.id);
       }
       io.emit("players", players);
       socket.emit("gameJoined", {
@@ -184,11 +192,30 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
+    const disconnectedPlayer = players.find((player) => player.id === socket.id);
     players = players.filter((player) => player.id !== socket.id);
     io.emit("playerLeft", players);
     if (players.length < 2) {
       gameStarted = false;
       io.emit("gameStopped");
+    } else if (disconnectedPlayer.turn) {
+      // passar a vez
+      for (let i = 0; i < players.length; i++) {
+        if (players[i].id === socket.id) {
+          players[i].turn = false;
+          if (i === players.length - 1) {
+            players[0].turn = true;
+          } else {
+            players[i + 1].turn = true;
+          }
+          break;
+        }
+      }
+      
+      io.emit("players", players);
+    } else if (disconnectedPlayer.isHost) {
+      players[0].isHost = true;
+      io.emit("players", players);
     }
   });
 });
