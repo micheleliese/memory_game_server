@@ -44,6 +44,8 @@ const findDuplicates = (lista) => {
   return null;
 }
 
+const getPlayerName = (socketId) => players.find((player) => player.id === socketId).name;
+
 io.on("connection", (socket) => {
   console.log(`New player connected: ${socket.id}`);
   socket.on("joinGame", (playerName) => {
@@ -92,21 +94,22 @@ io.on("connection", (socket) => {
   socket.on("flipCard", (cardIndex) => {
     console.log(`Flipped card: ${cardIndex}`);
     gameBoard = gameBoard.map((card) => (card.id === cardIndex ? { ...card, isFlipped: true } : card));
-    if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) {
+    if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) { // se achou dois cards virados e que nao deram match
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].imageId === flippedCards[1].imageId) {
         console.log(`Matched cards: ${flippedCards.map((card) => JSON.stringify(card))}`);
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isMatched: true } : card
         );
-        // incrementar score com map
+
         players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
         
         console.log(`Players: ${players.map((player) => JSON.stringify(player))}`);
 
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
-          message: `Player ${socket.id} has matched cards`,
+          message: `${getPlayerName(socket.id)} has matched cards`,
+          variant: 'success'
         });
         io.emit("players", players);
 
@@ -137,7 +140,8 @@ io.on("connection", (socket) => {
         // enviar mensagem de cartas diferentes
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
-          message: `Player ${socket.id} has flipped cards`,
+          message: `${getPlayerName(socket.id)} errou!`,
+          variant: 'error'
         });
         // resetar cartas viradas
         gameBoard = gameBoard.map((card) =>
@@ -162,16 +166,18 @@ io.on("connection", (socket) => {
         setTimeout(() => {
           io.emit("cardFlipped", {
             gameBoard: gameBoard,
-            message: `reset cards flipped by player ${socket.id}`,
+            message: null,
+            variant: 'info'
           });
           io.emit("players", players);
         }, 2000);
       }
     } else {
-      console.log(`Player ${socket.id} has flipped a card and is waiting for the turn`);
+      console.log(`Player ${getPlayerName(socket.id)} has flipped a card and is waiting for the turn`);
       io.emit("cardFlipped", {
         gameBoard: gameBoard,
-        message: `Player ${socket.id} has flipped a card`,
+        message: `${getPlayerName(socket.id)} has flipped a card`,
+        variant: 'info'
       });
     }
   });
