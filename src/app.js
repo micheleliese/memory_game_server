@@ -44,6 +44,20 @@ const findDuplicates = (lista) => {
   return null;
 }
 
+const passTheTurn = (socketId) => {
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].id === socketId) {
+      players[i].turn = false;
+      if (i === players.length - 1) {
+        players[0].turn = true;
+      } else {
+        players[i + 1].turn = true;
+      }
+      break;
+    }
+  }
+} 
+
 const getPlayerName = (socketId) => players.find((player) => player.id === socketId).name;
 
 io.on("connection", (socket) => {
@@ -156,18 +170,7 @@ io.on("connection", (socket) => {
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isFlipped: false } : card
         );
 
-        // passar a vez
-        for (let i = 0; i < players.length; i++) {
-          if (players[i].id === socket.id) {
-            players[i].turn = false;
-            if (i === players.length - 1) {
-              players[0].turn = true;
-            } else {
-              players[i + 1].turn = true;
-            }
-            break;
-          }
-        } 
+        passTheTurn(socket.id);
 
         console.log(`Jogadores: ${players.map((player) => JSON.stringify(player))}`);
 
@@ -199,19 +202,7 @@ io.on("connection", (socket) => {
       gameStarted = false;
       io.emit("gameStopped");
     } else if (disconnectedPlayer.turn) {
-      // passar a vez
-      for (let i = 0; i < players.length; i++) {
-        if (players[i].id === socket.id) {
-          players[i].turn = false;
-          if (i === players.length - 1) {
-            players[0].turn = true;
-          } else {
-            players[i + 1].turn = true;
-          }
-          break;
-        }
-      }
-      
+      passTheTurn(socket.id);
       io.emit("players", players);
     } else if (disconnectedPlayer.isHost) {
       players[0].isHost = true;
