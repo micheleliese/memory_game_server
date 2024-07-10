@@ -196,18 +196,19 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
     const disconnectedPlayer = players.find((player) => player.id === socket.id);
-    players = players.filter((player) => player.id !== socket.id);
-    io.emit("playerLeft", players);
-    if (players.length < 2) {
+    const auxPlayers = players.filter((player) => player.id !== socket.id);
+    io.emit("playerLeft", auxPlayers);
+    if (auxPlayers.length < 2) {
       gameStarted = false;
       io.emit("gameStopped");
     } else if (disconnectedPlayer.turn) {
-      passTheTurn(socket.id);
-      io.emit("players", players);
+      passTheTurn(disconnectedPlayer.id);
+      io.emit("players", auxPlayers);
     } else if (disconnectedPlayer.isHost) {
-      players[0].isHost = true;
-      io.emit("players", players);
+      auxPlayers[0].isHost = true;
+      io.emit("players", auxPlayers);
     }
+    players = auxPlayers;
   });
 });
 
