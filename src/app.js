@@ -14,12 +14,13 @@ let gameBoard = [];
 let gameStarted = false;
 
 const initializeGameBoard = () => {
+  const maxCards = 8;
   const imageIds = [...Array(50)].map((_, index) => index + 1);
   for (let i = imageIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [imageIds[i], imageIds[j]] = [imageIds[j], imageIds[i]];
   }
-  const selectedImageIds = imageIds.slice(0, 8);
+  const selectedImageIds = imageIds.slice(0, maxCards);
   let duplicatedImageIds = [...selectedImageIds, ...selectedImageIds];
   for (let i = duplicatedImageIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
