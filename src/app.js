@@ -12,9 +12,9 @@ const port = 3000;
 let players = [];
 let gameBoard = [];
 let gameStarted = false;
+let maxCards = 0;
 
 const initializeGameBoard = () => {
-  const maxCards = 8;
   const imageIds = [...Array(50)].map((_, index) => index + 1);
   for (let i = imageIds.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -93,7 +93,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("startGame", () => {
+  socket.on("startGame", (numberOfCards) => {
     if (players.length < 2) {
       console.log("O jogo não pode ser iniciado com menos de 2 jogadores");
       socket.emit("gameStarted", {
@@ -102,6 +102,7 @@ io.on("connection", (socket) => {
       });
     } else {
       gameStarted = true;
+      maxCards = numberOfCards;
       const randonIndex = Math.floor(Math.random() * players.length);
       players = players.map((player, index) => ({
         ...player,
