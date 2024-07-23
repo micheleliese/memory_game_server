@@ -13,6 +13,8 @@ let players = [];
 let gameBoard = [];
 let gameStarted = false;
 let maxCards = 0;
+const maxSessions = 5;
+let currentSession = 1;
 
 const initializeGameBoard = () => {
   const imageIds = [...Array(50)].map((_, index) => index + 1);
@@ -46,39 +48,46 @@ const findDuplicates = (lista) => {
 }
 
 const passTheTurn = (socketId) => {
-  for (let i = 0; i < players.length; i++) {
-    if (players[i].id === socketId) {
-      players[i].turn = false;
-      if (i === players.length - 1) {
-        players[0].turn = true;
-      } else {
-        players[i + 1].turn = true;
-      }
-      break;
-    }
+  const activePlayers = players.filter((player) => player.isActive);
+  const currentPlayerIndex = activePlayers.findIndex((player) => player.id === socketId);
+  activePlayers[currentPlayerIndex].turn = false;
+  if (currentPlayerIndex === activePlayers.length - 1) {
+    activePlayers[0].turn = true;
+  } else {
+    activePlayers[currentPlayerIndex + 1].turn = true;
   }
-} 
+}
 
 const getPlayerName = (socketId) => players.find((player) => player.id === socketId).name;
 
 io.on("connection", (socket) => {
   console.log(`Novo jogador conectado: ${socket.id}`);
-  socket.on("joinGame", (playerName) => {
+  socket.on("joinGame", ({ playerName, ip }) => {
     if (gameStarted) {
-      console.log(`O jogador ${socket.id} não pode entrar no jogo porque já começou`);
-      socket.emit("gameJoined", {
-        success: false,
-        message: "O jogo já está cheio ou em andamento",
-      });
+      const playerWithSameIp = players.find((player) => player.ip === ip);
+      if (playerWithSameIp) {
+        console.log(`O jogador ${socket.id} retornou ao jogo com o nome: ${playerName} e IP: ${ip}`);
+        socket.emit("gameJoined", {
+          success: true,
+          message: "Você voltou ao jogo!",
+        });
+      } else {
+        console.log(`O jogador ${socket.id} não pode entrar no jogo porque já começou`);
+        socket.emit("gameJoined", {
+          success: false,
+          message: "O jogo já está cheio ou em andamento",
+        });
+      }   
     } else {
-      console.log(`O jogador ${socket.id} entrou no jogo com o nome: ${playerName}`);
-
+      console.log(`O jogador ${socket.id} entrou no jogo com o nome: ${playerName} e IP: ${ip}`);
       const newPlayer = { 
         id: socket.id, 
         name: playerName,
         score: 0, 
         turn: false,
-        isHost: players.length === 0
+        isHost: players.length === 0,
+        ip: ip,
+        isActive: true
       };
       players.push(newPlayer);
 
@@ -88,7 +97,7 @@ io.on("connection", (socket) => {
       io.emit("players", players);
       socket.emit("gameJoined", {
         success: true,
-        message: "Você entrou no jogo com sucesso",
+        message: "Você entrou no jogo!",
       });
     }
   });
@@ -128,7 +137,7 @@ io.on("connection", (socket) => {
 
         players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
         
-        console.log(`Jogadores: ${players.map((player) => JSON.stringify(player))}`);
+        console.table(players);
 
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
@@ -174,7 +183,7 @@ io.on("connection", (socket) => {
 
         passTheTurn(socket.id);
 
-        console.log(`Jogadores: ${players.map((player) => JSON.stringify(player))}`);
+        console.table(players);
 
         setTimeout(() => {
           io.emit("cardFlipped", {
@@ -198,16 +207,21 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
     const disconnectedPlayer = players.find((player) => player.id === socket.id);
-    const auxPlayers = players.filter((player) => player.id !== socket.id);
+    const auxPlayers = players.map((player) => player.id === socket.id ? { ...player, isActive: false } : player);
     io.emit("playerLeft", auxPlayers);
     if (auxPlayers.length < 2) {
       gameStarted = false;
+      console.log("O jogo foi interrompido porque não há jogadores suficientes");
       io.emit("gameStopped");
     } else if (disconnectedPlayer.turn) {
       passTheTurn(disconnectedPlayer.id);
+      console.log(`O jogador ${getPlayerName(socket.id)} desconectou e passou a vez`);
+      console.table(players);
       io.emit("players", auxPlayers);
     } else if (disconnectedPlayer.isHost) {
       auxPlayers[0].isHost = true;
+      console.log(`O jogador ${auxPlayers[0].name} é o novo anfitrião`);
+      console.table(players);
       io.emit("players", auxPlayers);
     }
     players = auxPlayers;
