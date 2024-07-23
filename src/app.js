@@ -117,7 +117,8 @@ io.on("connection", (socket) => {
         ...player,
         turn: index === randonIndex,
       }));
-      console.log(`Jogo iniciado com jogadores: ${players.map((player) => JSON.stringify(player))} e índice aleatório: ${randonIndex}`);
+      console.log(`Jogo iniciado com ${players.length} jogadores e índice aleatório: ${randonIndex}`);
+      console.table(players);
       io.emit("players", players);
       initializeGameBoard();
       io.emit("startedGame", gameBoard);
@@ -130,22 +131,19 @@ io.on("connection", (socket) => {
     if (gameBoard.filter((card) => card.isFlipped && !card.isMatched).length === 2) { // se encontrou duas cartas viradas e não combinadas
       const flippedCards = gameBoard.filter((card) => card.isFlipped && !card.isMatched);
       if (flippedCards[0].imageId === flippedCards[1].imageId) {
-        console.log(`Cartas combinadas: ${flippedCards.map((card) => JSON.stringify(card))}`);
+        console.log('Cartas combinadas:');
+        console.table(flippedCards);
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isMatched: true } : card
         );
-
         players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
-        
         console.table(players);
-
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
           message: `${getPlayerName(socket.id)} combinou as cartas`,
           variant: 'success'
         });
         io.emit("players", players);
-
         // verificar se todas as cartas já foram viradas
         if (gameBoard.filter((card) => !card.isMatched).length === 0) {
           console.log("Todas as cartas foram combinadas");
@@ -169,8 +167,8 @@ io.on("connection", (socket) => {
           }
         }
       } else {
-        console.log(`As cartas viradas são diferentes: ${flippedCards.map((card) => JSON.stringify(card))}`);
-        // enviar mensagem de cartas diferentes
+        console.log('As cartas viradas são diferentes:');
+        console.table(flippedCards);
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
           message: `${getPlayerName(socket.id)} errou!`,
@@ -180,11 +178,8 @@ io.on("connection", (socket) => {
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isFlipped: false } : card
         );
-
         passTheTurn(socket.id);
-
         console.table(players);
-
         setTimeout(() => {
           io.emit("cardFlipped", {
             gameBoard: gameBoard,
@@ -216,15 +211,14 @@ io.on("connection", (socket) => {
     } else if (disconnectedPlayer.turn) {
       passTheTurn(disconnectedPlayer.id);
       console.log(`O jogador ${getPlayerName(socket.id)} desconectou e passou a vez`);
-      console.table(players);
       io.emit("players", auxPlayers);
     } else if (disconnectedPlayer.isHost) {
       auxPlayers[0].isHost = true;
       console.log(`O jogador ${auxPlayers[0].name} é o novo anfitrião`);
-      console.table(players);
       io.emit("players", auxPlayers);
     }
     players = auxPlayers;
+    console.table(players);
   });
 });
 
