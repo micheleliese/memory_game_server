@@ -159,10 +159,13 @@ io.on("connection", (socket) => {
           if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
             console.log("Há um empate");
             currentRound++;
+            duplicates[0].victories++;
+            duplicates[1].victories++;
             if (currentRound > maxRounds) {
               console.log("O jogo terminou");
               gameStarted = false;
               io.emit("gameFinished");
+              io.emit("players", players);
               players.map((player) => {
                 player.score = 0;
                 player.victories = 0;
@@ -183,6 +186,7 @@ io.on("connection", (socket) => {
               console.log("O jogo terminou");
               gameStarted = false;
               io.emit("gameFinished");
+              io.emit("players", players);
               players.map((player) => {
                 player.score = 0;
                 player.victories = 0;
