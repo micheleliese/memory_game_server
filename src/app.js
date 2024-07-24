@@ -13,8 +13,8 @@ let players = [];
 let gameBoard = [];
 let gameStarted = false;
 let maxCards = 0;
-const maxSessions = 3;
-let currentSession = 1;
+const maxRounds = 3;
+let currentRound = 1;
 
 const initializeGameBoard = () => {
   const imageIds = [...Array(50)].map((_, index) => index + 1);
@@ -92,7 +92,8 @@ io.on("connection", (socket) => {
         turn: false,
         isHost: players.length === 0,
         ip: ip,
-        isActive: true
+        isActive: true,
+        victories: 0
       };
       players.push(newPlayer);
 
@@ -157,18 +158,35 @@ io.on("connection", (socket) => {
           const playerWithMaxScore = players.reduce((prev, current) => (prev.score > current.score ? prev : current));
           if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
             console.log("Há um empate");
-            initializeGameBoard();
-            players = players.map((player) => ({ ...player, score: 0 }));
-            io.emit("startedGame", gameBoard);
-            io.emit("players", players);
-            io.emit("gameTied", duplicates);
+            currentRound++;
+            if (currentRound > maxRounds) {
+              console.log("O jogo terminou");
+              gameStarted = false;
+              io.emit("gameFinished");
+            } else {
+              console.log(`Iniciando a rodada ${currentRound}`);
+              initializeGameBoard();
+              io.emit("players", players);
+              io.emit("startedGame", gameBoard);
+              io.emit("gameTied", duplicates);
+              io.emit("round", { currentRound, maxRounds });
+            }
           } else {
             console.log("Há um vencedor");
-            initializeGameBoard();
-            players = players.map((player) => ({ ...player, score: 0 }));
-            io.emit("startedGame", gameBoard);
-            io.emit("players", players);
-            io.emit("gameWon", playerWithMaxScore);
+            currentRound++;
+            playerWithMaxScore.victories++;
+            if (currentRound > maxRounds) {
+              console.log("O jogo terminou");
+              gameStarted = false;
+              io.emit("gameFinished");
+            } else {
+              console.log(`Iniciando a rodada ${currentRound}`);
+              initializeGameBoard();
+              io.emit("players", players);
+              io.emit("startedGame", gameBoard);
+              io.emit("gameWon", playerWithMaxScore);
+              io.emit("round", { currentRound, maxRounds });
+            }
           }
         }
       } else {
