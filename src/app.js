@@ -163,6 +163,10 @@ io.on("connection", (socket) => {
               console.log("O jogo terminou");
               gameStarted = false;
               io.emit("gameFinished");
+              players.map((player) => {
+                player.score = 0;
+                player.victories = 0;
+              });
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
@@ -179,6 +183,10 @@ io.on("connection", (socket) => {
               console.log("O jogo terminou");
               gameStarted = false;
               io.emit("gameFinished");
+              players.map((player) => {
+                player.score = 0;
+                player.victories = 0;
+              });
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
