@@ -13,7 +13,7 @@ let players = [];
 let gameBoard = [];
 let gameStarted = false;
 let maxCards = 0;
-const maxSessions = 5;
+const maxSessions = 3;
 let currentSession = 1;
 
 const initializeGameBoard = () => {
@@ -68,12 +68,14 @@ io.on("connection", (socket) => {
       const playerWithSameIp = players.find((player) => player.ip === ip);
       if (playerWithSameIp) {
         console.log(`O jogador ${socket.id} retornou ao jogo com o nome: ${playerName} e IP: ${ip}`);
-        players = players.map((player) => (player.ip === ip && player.name === playerName) ? { ...player, isActive: true } : player);
+        players = players.map((player) => (player.ip === ip && player.name === playerName) ? { ...player, id: socket.id, isActive: true } : player);
+        console.table(players);
         socket.emit("gameJoined", {
           success: true,
           message: "Você voltou ao jogo!",
         });
         io.emit("players", players);
+        io.emit("startedGame", gameBoard);
       } else {
         console.log(`O jogador ${socket.id} não pode entrar no jogo porque já começou`);
         socket.emit("gameJoined", {
@@ -204,25 +206,29 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
+    const activePlayers = players.filter((player) => player.isActive);
     const disconnectedPlayer = players.find((player) => player.id === socket.id);
-    players.forEach((player) => {
-      if (player.id === socket.id) {
-        player.isActive = false;
-      }
-    });
+    disconnectedPlayer.isActive = false;
     io.emit("playerLeft", players);
-    if (players.length < 2) {
+    if (activePlayers.length < 2) {
       gameStarted = false;
       console.log("O jogo foi interrompido porque não há jogadores suficientes");
       io.emit("gameStopped");
-    } else if (disconnectedPlayer.turn) {
+    } else if (disconnectedPlayer.turn && !disconnectedPlayer.isHost) {
       passTheTurn(disconnectedPlayer.id);
       console.log(`O jogador ${getPlayerName(socket.id)} desconectou e passou a vez`);
       io.emit("players", players);
-    } else if (disconnectedPlayer.isHost) {
+    } else if (disconnectedPlayer.turn && disconnectedPlayer.isHost) {
+      disconnectedPlayer.isHost = false;
       const newHost = players.find((player) => player.isActive);
       newHost.isHost = true;
+      passTheTurn(disconnectedPlayer.id);
+      console.log(`O jogador ${players[0].name} é o novo anfitrião`);
+      io.emit("players", players);
+    } else if (disconnectedPlayer.isHost) {
       disconnectedPlayer.isHost = false;
+      const newHost = players.find((player) => player.isActive);
+      newHost.isHost = true;
       console.log(`O jogador ${players[0].name} é o novo anfitrião`);
       io.emit("players", players);
     }
