@@ -189,6 +189,7 @@ io.on("connection", (socket) => {
             duplicates[1].victories++;
             if (currentRound > maxRounds) {
               console.log("O jogo terminou");
+              currentRound = 1;
               gameStarted = false;
               io.emit("gameFinished");
               io.emit("players", players);
@@ -213,6 +214,7 @@ io.on("connection", (socket) => {
             playerWithMaxScore.victories++;
             if (currentRound > maxRounds) {
               console.log("O jogo terminou");
+              currentRound = 1;
               gameStarted = false;
               io.emit("gameFinished");
               io.emit("players", players);
