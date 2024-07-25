@@ -47,16 +47,23 @@ const findDuplicates = (lista) => {
   return null;
 }
 
-const passTheTurn = (socketId) => {
-  const activePlayers = players.filter((player) => player.isActive);
-  const currentPlayerIndex = activePlayers.findIndex((player) => player.id === socketId);
-  activePlayers.forEach((player) => player.turn = false);
-  players.forEach((player) => player.turn = false);
-  if (currentPlayerIndex === activePlayers.length - 1) {
-    activePlayers[0].turn = true;
-  } else {
-    activePlayers[currentPlayerIndex + 1].turn = true;
+const getNextActivePlayerIndex = (players, currentIndex) => {
+  const totalPlayers = players.length;
+  let nextIndex = (currentIndex + 1) % totalPlayers;
+  while (!players[nextIndex].isActive) {
+    nextIndex = (nextIndex + 1) % totalPlayers;
+    if (nextIndex === currentIndex) {
+      return -1;
+    }
   }
+  return nextIndex;
+}
+
+const passTheTurn = (socketId) => {
+  const currentPlayerIndex = players.findIndex((player) => player.id === socketId);
+  const nextPlayerIndex = getNextActivePlayerIndex(players, currentPlayerIndex);
+  players.forEach((player) => player.turn = false);
+  players[nextPlayerIndex].turn = true;
 }
 
 const getPlayerName = (socketId) => players.find((player) => player.id === socketId).name;
