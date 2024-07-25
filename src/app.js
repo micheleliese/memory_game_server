@@ -273,14 +273,19 @@ io.on("connection", (socket) => {
   //=============================================================================================================
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
-    const activePlayers = players.filter((player) => player.isActive);
     const disconnectedPlayer = players.find((player) => player.id === socket.id);
+    const activePlayers = players.filter((player) => player.isActive && player.id !== socket.id);
     if (!disconnectedPlayer) {
       return;
     }
     io.emit("playerLeft", players);
     if (activePlayers.length < 2) {
       gameStarted = false;
+      players = [];
+      gameBoard = [];
+      gameStarted = false;
+      maxCards = 0;
+      currentRound = 1;
       console.log("O jogo foi interrompido porque não há jogadores suficientes");
       io.emit("gameStopped");
     } else if (disconnectedPlayer.turn && !disconnectedPlayer.isHost) {
