@@ -13,8 +13,8 @@ let players = [];
 let gameBoard = [];
 let gameStarted = false;
 let maxCards = 0;
-const maxRounds = 3;
 let currentRound = 1;
+const maxRounds = 3;
 
 const initializeGameBoard = () => {
   const imageIds = [...Array(50)].map((_, index) => index + 1);
@@ -77,8 +77,9 @@ io.on("connection", (socket) => {
   socket.on("joinGame", ({ playerName, ip }) => {
     if (gameStarted) {
       const playerWithSameIp = players.find((player) => player.ip === ip);
-      if (playerWithSameIp) {
+      if (playerWithSameIp) { // RECONEXÃO
         console.log(`O jogador ${socket.id} retornou ao jogo com o nome: ${playerName} e IP: ${ip}`);
+        // Reativa player com mesmo IP e nome, mas com ID diferente. Cada nova conexão gera um novo ID de socket
         players = players.map((player) => (player.ip === ip && player.name === playerName) ? { ...player, id: socket.id, isActive: true } : player);
         console.table(players);
         socket.emit("gameJoined", {
@@ -96,6 +97,7 @@ io.on("connection", (socket) => {
       }   
     } else {
       console.log(`O jogador ${socket.id} entrou no jogo com o nome: ${playerName} e IP: ${ip}`);
+      // ADICIONA PLAYER
       const newPlayer = { 
         id: socket.id, 
         name: playerName,
@@ -185,25 +187,27 @@ io.on("connection", (socket) => {
           const playerWithMaxScore = players.reduce((prev, current) => (prev.score > current.score ? prev : current));
           if (duplicates !== null && duplicates[0].score === playerWithMaxScore.score){
             console.log("Há um empate");
+            // Atualiza dados 
             currentRound++;
             duplicates[0].victories++;
             duplicates[1].victories++;
-            if (currentRound > maxRounds) {
+            if (currentRound > maxRounds) { // se atingiu o número máximo de rodadas, reseta pontuação, vitórias, rodada
               console.log("O jogo terminou");
               currentRound = 1;
               gameStarted = false;
               io.emit("gameFinished");
               io.emit("players", players);
-              players = players.map((player) => ({
+              players = players.map((player) => ({ 
                 ...player,
                 score: 0,
+                acumulatedScore: 0,
                 victories: 0,
                 isReady: false
               }));
-            } else {
+            } else { // se não atingiu o número máximo de rodadas
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
-              players = players.map((player) => ({ ...player, score: 0 }));
+              players = players.map((player) => ({ ...player, score: 0 })); // zera a pontuação dos jogadores
               console.table(players);
               io.emit("players", players);
               io.emit("startedGame", gameBoard);
@@ -214,7 +218,7 @@ io.on("connection", (socket) => {
             console.log("Há um vencedor");
             currentRound++;
             playerWithMaxScore.victories++;
-            if (currentRound > maxRounds) {
+            if (currentRound > maxRounds) { // se atingiu o número máximo de rodadas, reseta pontuação, vitórias, rodada
               console.log("O jogo terminou");
               currentRound = 1;
               gameStarted = false;
@@ -223,13 +227,14 @@ io.on("connection", (socket) => {
               players = players.map((player) => ({
                 ...player,
                 score: 0,
+                acumulatedScore: 0,
                 victories: 0,
                 isReady: false
               }));
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
-              players = players.map((player) => ({ ...player, score: 0 }));
+              players = players.map((player) => ({ ...player, score: 0 })); // zera a pontuação dos jogadores
               console.table(players);
               io.emit("players", players);
               io.emit("startedGame", gameBoard);
@@ -289,6 +294,8 @@ io.on("connection", (socket) => {
     const activePlayers = players.filter((player) => player.isActive && player.id !== socket.id);
     if (!disconnectedPlayer) {
       return;
+    } else {
+      disconnectedPlayer.isActive = false;
     }
     io.emit("playerLeft", players);
     if (activePlayers.length < 2) {
