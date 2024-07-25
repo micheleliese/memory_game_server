@@ -105,7 +105,8 @@ io.on("connection", (socket) => {
         isHost: players.length === 0,
         ip: ip,
         isActive: true,
-        victories: 0
+        victories: 0,
+        isReady: true
       };
       players.push(newPlayer);
 
@@ -196,7 +197,8 @@ io.on("connection", (socket) => {
               players = players.map((player) => ({
                 ...player,
                 score: 0,
-                victories: 0
+                victories: 0,
+                isReady: false
               }));
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
@@ -221,7 +223,8 @@ io.on("connection", (socket) => {
               players = players.map((player) => ({
                 ...player,
                 score: 0,
-                victories: 0
+                victories: 0,
+                isReady: false
               }));
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
@@ -266,6 +269,15 @@ io.on("connection", (socket) => {
         variant: 'info'
       });
     }
+  });
+
+  //=============================================================================================================
+  // PLAY AGAIN
+  //=============================================================================================================
+  socket.on("playAgain", () => {
+    console.log(`O jogador ${getPlayerName(socket.id)} está pronto para jogar novamente`);
+    players = players.map((player) => player.id === socket.id ? { ...player, isReady: true } : player);
+    io.emit("players", players);
   });
 
   //=============================================================================================================
