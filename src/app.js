@@ -70,6 +70,10 @@ const getPlayerName = (socketId) => players.find((player) => player.id === socke
 
 io.on("connection", (socket) => {
   console.log(`Novo jogador conectado: ${socket.id}`);
+
+  //=============================================================================================================
+  // JOIN GAME
+  //=============================================================================================================
   socket.on("joinGame", ({ playerName, ip }) => {
     if (gameStarted) {
       const playerWithSameIp = players.find((player) => player.ip === ip);
@@ -96,6 +100,7 @@ io.on("connection", (socket) => {
         id: socket.id, 
         name: playerName,
         score: 0, 
+        acumulatedScore: 0,
         turn: false,
         isHost: players.length === 0,
         ip: ip,
@@ -115,6 +120,9 @@ io.on("connection", (socket) => {
     }
   });
 
+  //=============================================================================================================
+  // START GAME
+  //=============================================================================================================
   socket.on("startGame", (numberOfCards) => {
     if (players.length < 2) {
       console.log("O jogo não pode ser iniciado com menos de 2 jogadores");
@@ -138,6 +146,9 @@ io.on("connection", (socket) => {
     }
   });
 
+  //=============================================================================================================
+  // FLIP CARD
+  //=============================================================================================================
   socket.on("flipCard", (cardIndex) => {
     console.log(`Carta virada: ${cardIndex}`);
     gameBoard = gameBoard.map((card) => (card.id === cardIndex ? { ...card, isFlipped: true } : card));
@@ -149,7 +160,15 @@ io.on("connection", (socket) => {
         gameBoard = gameBoard.map((card) =>
           flippedCards.some((flippedCard) => flippedCard.id === card.id) ? { ...card, isMatched: true } : card
         );
-        players = players.map((player) => player.id === socket.id ? { ...player, score: player.score + 1 } : player);
+        players = players.map((player) => player.id === socket.id ? 
+          { 
+            ...player, 
+            score: player.score + 1, 
+            acumulatedScore: player.acumulatedScore + 1
+          } 
+          : 
+          player
+        );
         console.table(players);
         io.emit("cardFlipped", {
           gameBoard: gameBoard,
@@ -173,13 +192,16 @@ io.on("connection", (socket) => {
               gameStarted = false;
               io.emit("gameFinished");
               io.emit("players", players);
-              players.map((player) => {
-                player.score = 0;
-                player.victories = 0;
-              });
+              players = players.map((player) => ({
+                ...player,
+                score: 0,
+                victories: 0
+              }));
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
+              players = players.map((player) => ({ ...player, score: 0 }));
+              console.table(players);
               io.emit("players", players);
               io.emit("startedGame", gameBoard);
               io.emit("gameTied", duplicates);
@@ -194,13 +216,16 @@ io.on("connection", (socket) => {
               gameStarted = false;
               io.emit("gameFinished");
               io.emit("players", players);
-              players.map((player) => {
-                player.score = 0;
-                player.victories = 0;
-              });
+              players = players.map((player) => ({
+                ...player,
+                score: 0,
+                victories: 0
+              }));
             } else {
               console.log(`Iniciando a rodada ${currentRound}`);
               initializeGameBoard();
+              players = players.map((player) => ({ ...player, score: 0 }));
+              console.table(players);
               io.emit("players", players);
               io.emit("startedGame", gameBoard);
               io.emit("gameWon", playerWithMaxScore);
@@ -241,11 +266,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  //=============================================================================================================
+  // DISCONNECT
+  //=============================================================================================================
   socket.on("disconnect", () => {
     console.log(`Jogador desconectado: ${socket.id}`);
     const activePlayers = players.filter((player) => player.isActive);
     const disconnectedPlayer = players.find((player) => player.id === socket.id);
-    disconnectedPlayer.isActive = false;
+    if (!disconnectedPlayer) {
+      return;
+    }
     io.emit("playerLeft", players);
     if (activePlayers.length < 2) {
       gameStarted = false;
